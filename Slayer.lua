@@ -1,14 +1,24 @@
 -- ============================================================================
--- 👁️ KILLER HUB - MM2 ADVANCED VISUALS (MID-GAME JOIN & ANTI-LAG ENGINE)
+-- 👁️ KILLER HUB - MM2 ADVANCED VISUALS (UNIVERSAL GUN TRACKER & SIZE ENGINE)
 -- ============================================================================
 
 -- [1] INTERFAZ GRÁFICA INSTANTÁNEA
 local KillerHub = loadstring(game:HttpGet("https://raw.githubusercontent.com/Paolo0109/KillerHUB/refs/heads/main/InterfazBase.lua"))()
 local VisualsTab = KillerHub:CreateTab("Visuales", "rbxassetid://10747372517")
 
-VisualsTab:CreateSection("Murder Mystery 2 - Opciones ESP")
+VisualsTab:CreateSection("Murder Mystery 2 - Opciones ESP Jugadores")
 
-local Config = { Chams = false, Outline = false, Highlight = false, Box = false, Name = false }
+local Config = { 
+    Chams = false, 
+    Outline = false, 
+    Highlight = false, 
+    Box = false, 
+    Name = false,
+    GunCham = false,    -- Interruptor para el ESP de la pistola
+    GunName = false,    -- Interruptor para el texto de la pistola
+    NameSize = 13,      
+    GunNameSize = 14    
+}
 
 VisualsTab:CreateToggle("EspCham", "Habilitar ESP Cham (Relleno Completo)", function(val) Config.Chams = val end)
 VisualsTab:CreateToggle("EspOutline", "Habilitar ESP Outline (Contorno)", function(val) Config.Outline = val end)
@@ -16,8 +26,26 @@ VisualsTab:CreateToggle("EspHighlight", "Habilitar ESP Highlight (Completo)", fu
 VisualsTab:CreateToggle("EspBox", "Habilitar ESP Box (Marco 2D Delgado)", function(val) Config.Box = val end)
 VisualsTab:CreateToggle("EspName", "Habilitar ESP Name (Solo Nombre)", function(val) Config.Name = val end)
 
+VisualsTab:CreateSection("Murder Mystery 2 - Opciones ESP Pistola")
+
+-- [NUEVOS BOTONES DE ACTIVACIÓN PARA LA PISTOLA]
+VisualsTab:CreateToggle("EspGunCham", "Habilitar ESP Gun (Pistola en Suelo)", function(val) Config.GunCham = val end)
+VisualsTab:CreateToggle("EspGunName", "Habilitar ESP Gun Name (Texto Pistola)", function(val) Config.GunName = val end)
+
+VisualsTab:CreateSection("Ajustes de Tamaño (Texto)")
+
+local NameSizeSlider = VisualsTab:CreateSlider("EspNameSize", "Tamaño del ESP Name (Jugadores)", 10, 30, function(val)
+    Config.NameSize = math.floor(val)
+end)
+NameSizeSlider:Set(13)
+
+local GunNameSizeSlider = VisualsTab:CreateSlider("EspGunNameSize", "Tamaño del ESP Gun Name", 10, 30, function(val)
+    Config.GunNameSize = math.floor(val)
+end)
+GunNameSizeSlider:Set(14)
+
 -- ============================================================================
--- 🧠 MOTOR ULTRA-OPTIMIZADO (Zero Lag & Real-time Role Scraper)
+-- 🧠 MOTOR ULTRA-OPTIMIZADO (Zero Lag, Multi-Map Gun Drop Scraper)
 -- ============================================================================
 task.spawn(function()
     local Players = game:GetService("Players")
@@ -26,48 +54,100 @@ task.spawn(function()
     
     local playerRoles = {} 
     local playerDeadStatus = {} 
+    local currentGunDrop = nil 
 
-    -- 🎨 PALETA DE COLORES CALIBRADA (Punto medio perfecto: Oscuros pero definidos)
-    local ColorMurderer = Color3.fromRGB(185, 25, 25)   -- Rojo Sangre Sólido
-    local ColorSheriff  = Color3.fromRGB(25, 85, 195)   -- Azul Real Premium
-    local ColorHero     = Color3.fromRGB(210, 160, 10)  -- Oro Oscuro Elegante
-    local ColorInnocent = Color3.fromRGB(25, 150, 25)   -- Verde Bosque Balanceado
-    local ColorDead     = Color3.fromRGB(90, 90, 90)    -- Gris Neutro (Muertos/Sin Rol)
+    -- 🎨 PALETA DE COLORES CALIBRADA
+    local ColorMurderer = Color3.fromRGB(185, 25, 25)   
+    local ColorSheriff  = Color3.fromRGB(25, 85, 195)   
+    local ColorHero     = Color3.fromRGB(210, 160, 10)  
+    local ColorInnocent = Color3.fromRGB(25, 150, 25)   
+    local ColorDead     = Color3.fromRGB(90, 90, 90)    
+    local ColorGunDrop  = Color3.fromRGB(255, 0, 0)     -- Rojo Intenso Absoluto
 
     -- 🔍 DETECTOR AVANZADO DE ROLES Y RESPALDO POR ARMAS
     local function getPlayerColor(player)
         local char = player.Character
         local name = player.Name
         
-        -- Verificar si tiene armas físicamente (Mano o Mochila) - Ideal para cuando entras a mitad de partida
         local backpack = player:FindFirstChild("Backpack")
         local hasKnife = (char and char:FindFirstChild("Knife")) or (backpack and backpack:FindFirstChild("Knife"))
         local hasGun = (char and (char:FindFirstChild("Gun") or char:FindFirstChild("Revolver"))) or 
                        (backpack and (backpack:FindFirstChild("Gun") or backpack:FindFirstChild("Revolver")))
 
-        -- Forzar rol si el escáner de armas detecta algo que el remoto no envió a tiempo
         if hasKnife then playerRoles[name] = "Murderer" end
 
-        -- Determinar estado de muerte o pérdida de rol
         local isDeadInNetwork = playerDeadStatus[name] == true
         local isDeadInGame = char and char:FindFirstChild("Humanoid") and char.Humanoid.Health <= 0
         local hasNoRole = playerRoles[name] == nil or playerRoles[name] == "" or playerRoles[name] == "Spectator"
 
-        -- Si no tiene rol activo en la ronda, o está muerto -> Gris
         if isDeadInNetwork or isDeadInGame or hasNoRole then
             return ColorDead
         end
 
-        -- Retornar color final según rol verificado
         local role = playerRoles[name]
         if role == "Murderer" then 
             return ColorMurderer 
-        elseif hasGun then 
-            return ColorHero -- Prioridad visual al portador actual de la pistola
         elseif role == "Sheriff" then 
             return ColorSheriff
+        elseif hasGun then 
+            return ColorHero 
         else 
             return ColorInnocent 
+        end
+    end
+
+    -- 📡 ESCÁNER UNIVERSAL DE PISTOLA EN EL SUELO (Lógica de Botones Integrada)
+    local function updateGunESP()
+        if not currentGunDrop or not currentGunDrop:IsDescendantOf(workspace) then
+            currentGunDrop = workspace:FindFirstChild("GunDrop", true)
+        end
+
+        if currentGunDrop and currentGunDrop:IsA("BasePart") then
+            -- 🔴 1. ESP Cham (Highlight) para la Pistola Tirada
+            local hl = currentGunDrop:FindFirstChild("KH_GunHighlight")
+            if Config.GunCham then
+                if not hl then
+                    hl = Instance.new("Highlight")
+                    hl.Name = "KH_GunHighlight"
+                    hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                    hl.Adornee = currentGunDrop
+                    hl.Parent = currentGunDrop
+                end
+                hl.FillColor = ColorGunDrop
+                hl.FillTransparency = 0         -- 100% Opaco (Rojo Sólido)
+                hl.OutlineTransparency = 1      -- Quitar bordes blancos por completo
+            else
+                if hl then hl:Destroy() end
+            end
+
+            -- 🩸 2. ESP Name para la Pistola Tirada
+            local nameTag = currentGunDrop:FindFirstChild("KH_GunName")
+            if Config.GunName then
+                if not nameTag then
+                    nameTag = Instance.new("BillboardGui")
+                    nameTag.Name = "KH_GunName"
+                    nameTag.Size = UDim2.new(0, 180, 0, 40)
+                    nameTag.StudsOffset = Vector3.new(0, 2.5, 0) 
+                    nameTag.AlwaysOnTop = true
+                    
+                    local label = Instance.new("TextLabel")
+                    label.Name = "Display"
+                    label.Size = UDim2.new(1, 0, 1, 0)
+                    label.BackgroundTransparency = 1
+                    label.Font = Enum.Font.SourceSansBold
+                    label.TextStrokeTransparency = 0.1
+                    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+                    label.TextColor3 = ColorGunDrop
+                    label.Text = "GUN HERE 🩸"
+                    label.Parent = nameTag
+                    
+                    nameTag.Adornee = currentGunDrop
+                    nameTag.Parent = currentGunDrop
+                end
+                nameTag.Display.TextSize = Config.GunNameSize
+            else
+                if nameTag then nameTag:Destroy() end
+            end
         end
     end
 
@@ -93,18 +173,18 @@ task.spawn(function()
         PlayerDataChanged.OnClientEvent:Connect(parsePlayerData)
     end
 
-    -- Reinicio limpio al cambiar de mapa/ronda
     local RoundStart = ReplicatedStorage:FindFirstChild("RoundStart", true)
     if RoundStart and RoundStart:IsA("RemoteEvent") then
         RoundStart.OnClientEvent:Connect(function(arg1, arg2)
             table.clear(playerRoles)
             table.clear(playerDeadStatus)
+            currentGunDrop = nil 
             parsePlayerData(arg2)
             parsePlayerData(arg1)
         end)
     end
 
-    -- 🛠️ RENDERIZADOR INTEGRADO (Reutiliza instancias en memoria, CERO LAG)
+    -- 🛠️ RENDERIZADOR INTEGRADO DE JUGADORES
     local function updateESP(player)
         if player == LocalPlayer then return end
         local char = player.Character
@@ -142,7 +222,7 @@ task.spawn(function()
             if box then box:Destroy() end
         end
 
-        -- 🏷️ CONTROL NAME
+        -- 🏷️ CONTROL NAME JUGADORES
         local nameTag = root:FindFirstChild("KH_Name")
         if Config.Name then
             if not nameTag then
@@ -156,7 +236,6 @@ task.spawn(function()
                 label.Name = "Display"
                 label.Size = UDim2.new(1, 0, 1, 0)
                 label.BackgroundTransparency = 1
-                label.TextSize = 13
                 label.Font = Enum.Font.SourceSansBold
                 label.TextStrokeTransparency = 0.3
                 label.Parent = nameTag
@@ -166,11 +245,12 @@ task.spawn(function()
             end
             nameTag.Display.Text = player.Name
             nameTag.Display.TextColor3 = color
+            nameTag.Display.TextSize = Config.NameSize
         else
             if nameTag then nameTag:Destroy() end
         end
 
-        -- 🌟 CONTROL HIGHLIGHT / CHAM
+        -- 🌟 CONTROL HIGHLIGHT / CHAM JUGADORES
         local hl = char:FindFirstChild("KH_Highlight")
         if Config.Chams or Config.Outline or Config.Highlight then
             if not hl then
@@ -201,12 +281,13 @@ task.spawn(function()
         end
     end
 
-    -- Bucle maestro optimizado para refrescar de forma fluida
+    -- Bucle maestro unificado
     while true do
         for _, p in pairs(Players:GetPlayers()) do
             updateESP(p)
         end
-        task.wait(0.2) -- Balance ideal entre rendimiento extremo y actualización rápida
+        updateGunESP() 
+        task.wait(0.2)
     end
 end)
 
