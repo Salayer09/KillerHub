@@ -6,23 +6,23 @@ local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local fileName = "KillerHubMM2Config.json"
+local fileName = "ESPHubMM2Config.json"
 local LocalPlayer = Players.LocalPlayer
 
--- [1] TABLA DE CONFIGURACIÓN (Filtros independientes por cada ESP)
+-- [1] TABLA DE CONFIGURACIÓN (Por defecto todo viene en false para que tú elijas qué activar)
 local Config = { 
-    Chams = false, ChamsRoles = {["Murderer"] = true, ["Sheriff"] = true, ["Hero"] = true, ["Innocent"] = true, ["Dead/None"] = true},
-    Outline = false, OutlineRoles = {["Murderer"] = true, ["Sheriff"] = true, ["Hero"] = true, ["Innocent"] = true, ["Dead/None"] = true},
-    Highlight = false, HighlightRoles = {["Murderer"] = true, ["Sheriff"] = true, ["Hero"] = true, ["Innocent"] = true, ["Dead/None"] = true},
-    Box = false, BoxRoles = {["Murderer"] = true, ["Sheriff"] = true, ["Hero"] = true, ["Innocent"] = true, ["Dead/None"] = true},
-    Name = false, NameRoles = {["Murderer"] = true, ["Sheriff"] = true, ["Hero"] = true, ["Innocent"] = true, ["Dead/None"] = true},
+    Chams = false, ChamsRoles = {["Murderer"] = false, ["Sheriff"] = false, ["Hero"] = false, ["Innocent"] = false, ["Dead/None"] = false},
+    Outline = false, OutlineRoles = {["Murderer"] = false, ["Sheriff"] = false, ["Hero"] = false, ["Innocent"] = false, ["Dead/None"] = false},
+    Highlight = false, HighlightRoles = {["Murderer"] = false, ["Sheriff"] = false, ["Hero"] = false, ["Innocent"] = false, ["Dead/None"] = false},
+    Box = false, BoxRoles = {["Murderer"] = false, ["Sheriff"] = false, ["Hero"] = false, ["Innocent"] = false, ["Dead/None"] = false},
+    Name = false, NameRoles = {["Murderer"] = false, ["Sheriff"] = false, ["Hero"] = false, ["Innocent"] = false, ["Dead/None"] = false},
     GunCham = false,    
     GunName = false,    
     NameSize = 13,      
     GunNameSize = 14    
 }
 
--- [2] SISTEMA DE ALMAZENAMIENTO LOCAL (Autoguardado Seguro)
+-- [2] SISTEMA DE ALMACENAMIENTO LOCAL (Autoguardado Seguro)
 local function saveConfig()
     if writefile then
         pcall(function()
@@ -57,31 +57,31 @@ VisualsTab:CreateSection("Murder Mystery 2 - Opciones ESP Jugadores")
 -- 1. CHAMS ESP
 local ToggleCham = VisualsTab:CreateToggle("EspCham", "Habilitar ESP Cham (Relleno Completo)", function(val) Config.Chams = val; saveConfig() end)
 local DropCham = VisualsTab:CreateMultiDropdown("ChamFilters", "└─ Aplicar Cham a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
-    for r, _ in pairs(Config.ChamsRoles) do if flags[r] ~= nil then Config.ChamsRoles[r] = flags[r] end end; saveConfig()
+    for r, _ in pairs(Config.ChamsRoles) do Config.ChamsRoles[r] = flags[r] == true end; saveConfig()
 end)
 
 -- 2. OUTLINE ESP
 local ToggleOutline = VisualsTab:CreateToggle("EspOutline", "Habilitar ESP Outline (Contorno)", function(val) Config.Outline = val; saveConfig() end)
 local DropOutline = VisualsTab:CreateMultiDropdown("OutlineFilters", "└─ Aplicar Outline a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
-    for r, _ in pairs(Config.OutlineRoles) do if flags[r] ~= nil then Config.OutlineRoles[r] = flags[r] end end; saveConfig()
+    for r, _ in pairs(Config.OutlineRoles) do Config.OutlineRoles[r] = flags[r] == true end; saveConfig()
 end)
 
 -- 3. HIGHLIGHT ESP
 local ToggleHighlight = VisualsTab:CreateToggle("EspHighlight", "Habilitar ESP Highlight (Completo)", function(val) Config.Highlight = val; saveConfig() end)
 local DropHighlight = VisualsTab:CreateMultiDropdown("HighlightFilters", "└─ Aplicar Highlight a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
-    for r, _ in pairs(Config.HighlightRoles) do if flags[r] ~= nil then Config.HighlightRoles[r] = flags[r] end end; saveConfig()
+    for r, _ in pairs(Config.HighlightRoles) do Config.HighlightRoles[r] = flags[r] == true end; saveConfig()
 end)
 
 -- 4. BOX ESP
 local ToggleBox = VisualsTab:CreateToggle("EspBox", "Habilitar ESP Box (Marco 2D Delgado)", function(val) Config.Box = val; saveConfig() end)
 local DropBox = VisualsTab:CreateMultiDropdown("BoxFilters", "└─ Aplicar Box a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
-    for r, _ in pairs(Config.BoxRoles) do if flags[r] ~= nil then Config.BoxRoles[r] = flags[r] end end; saveConfig()
+    for r, _ in pairs(Config.BoxRoles) do Config.BoxRoles[r] = flags[r] == true end; saveConfig()
 end)
 
 -- 5. NAME ESP
 local ToggleName = VisualsTab:CreateToggle("EspName", "Habilitar ESP Name (Solo Nombre)", function(val) Config.Name = val; saveConfig() end)
 local DropName = VisualsTab:CreateMultiDropdown("NameFilters", "└─ Aplicar Name a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
-    for r, _ in pairs(Config.NameRoles) do if flags[r] ~= nil then Config.NameRoles[r] = flags[r] end end; saveConfig()
+    for r, _ in pairs(Config.NameRoles) do Config.NameRoles[r] = flags[r] == true end; saveConfig()
 end)
 
 
@@ -102,7 +102,7 @@ local GunNameSizeSlider = VisualsTab:CreateSlider("EspGunNameSize", "Tamaño del
     saveConfig()
 end)
 
--- [4] APLICAR ESTADOS GUARDADOS A LA INTERFAZ (Forzar Sincronización Visual)
+-- [4] APLICAR ESTADOS GUARDADOS A LA INTERFAZ
 ToggleCham:Set(Config.Chams)
 ToggleOutline:Set(Config.Outline)
 ToggleHighlight:Set(Config.Highlight)
@@ -113,7 +113,7 @@ ToggleGunName:Set(Config.GunName)
 NameSizeSlider:Set(Config.NameSize)
 GunNameSizeSlider:Set(Config.GunNameSize)
 
--- Forzar de forma nativa que los dropdowns marquen visualmente lo que el archivo JSON cargó
+-- Forzar la sincronización visual de los Dropdowns múltiples con los datos reales
 if DropCham and DropCham.Set then DropCham:Set(Config.ChamsRoles) end
 if DropOutline and DropOutline.Set then DropOutline:Set(Config.OutlineRoles) end
 if DropHighlight and DropHighlight.Set then DropHighlight:Set(Config.HighlightRoles) end
