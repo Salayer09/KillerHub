@@ -22,7 +22,7 @@ local Config = {
     GunNameSize = 14    
 }
 
--- [2] SISTEMA DE ALMACENAMIENTO LOCAL (Autoguardado Seguro)
+-- [2] SISTEMA DE ALMAZENAMIENTO LOCAL (Autoguardado Seguro)
 local function saveConfig()
     if writefile then
         pcall(function()
@@ -56,31 +56,31 @@ VisualsTab:CreateSection("Murder Mystery 2 - Opciones ESP Jugadores")
 
 -- 1. CHAMS ESP
 local ToggleCham = VisualsTab:CreateToggle("EspCham", "Habilitar ESP Cham (Relleno Completo)", function(val) Config.Chams = val; saveConfig() end)
-VisualsTab:CreateMultiDropdown("ChamFilters", "└─ Aplicar Cham a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
+local DropCham = VisualsTab:CreateMultiDropdown("ChamFilters", "└─ Aplicar Cham a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
     for r, _ in pairs(Config.ChamsRoles) do if flags[r] ~= nil then Config.ChamsRoles[r] = flags[r] end end; saveConfig()
 end)
 
 -- 2. OUTLINE ESP
 local ToggleOutline = VisualsTab:CreateToggle("EspOutline", "Habilitar ESP Outline (Contorno)", function(val) Config.Outline = val; saveConfig() end)
-VisualsTab:CreateMultiDropdown("OutlineFilters", "└─ Aplicar Outline a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
+local DropOutline = VisualsTab:CreateMultiDropdown("OutlineFilters", "└─ Aplicar Outline a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
     for r, _ in pairs(Config.OutlineRoles) do if flags[r] ~= nil then Config.OutlineRoles[r] = flags[r] end end; saveConfig()
 end)
 
 -- 3. HIGHLIGHT ESP
 local ToggleHighlight = VisualsTab:CreateToggle("EspHighlight", "Habilitar ESP Highlight (Completo)", function(val) Config.Highlight = val; saveConfig() end)
-VisualsTab:CreateMultiDropdown("HighlightFilters", "└─ Aplicar Highlight a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
+local DropHighlight = VisualsTab:CreateMultiDropdown("HighlightFilters", "└─ Aplicar Highlight a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
     for r, _ in pairs(Config.HighlightRoles) do if flags[r] ~= nil then Config.HighlightRoles[r] = flags[r] end end; saveConfig()
 end)
 
 -- 4. BOX ESP
 local ToggleBox = VisualsTab:CreateToggle("EspBox", "Habilitar ESP Box (Marco 2D Delgado)", function(val) Config.Box = val; saveConfig() end)
-VisualsTab:CreateMultiDropdown("BoxFilters", "└─ Aplicar Box a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
+local DropBox = VisualsTab:CreateMultiDropdown("BoxFilters", "└─ Aplicar Box a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
     for r, _ in pairs(Config.BoxRoles) do if flags[r] ~= nil then Config.BoxRoles[r] = flags[r] end end; saveConfig()
 end)
 
 -- 5. NAME ESP
 local ToggleName = VisualsTab:CreateToggle("EspName", "Habilitar ESP Name (Solo Nombre)", function(val) Config.Name = val; saveConfig() end)
-VisualsTab:CreateMultiDropdown("NameFilters", "└─ Aplicar Name a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
+local DropName = VisualsTab:CreateMultiDropdown("NameFilters", "└─ Aplicar Name a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
     for r, _ in pairs(Config.NameRoles) do if flags[r] ~= nil then Config.NameRoles[r] = flags[r] end end; saveConfig()
 end)
 
@@ -102,7 +102,7 @@ local GunNameSizeSlider = VisualsTab:CreateSlider("EspGunNameSize", "Tamaño del
     saveConfig()
 end)
 
--- [4] APLICAR ESTADOS GUARDADOS A LA INTERFAZ
+-- [4] APLICAR ESTADOS GUARDADOS A LA INTERFAZ (Forzar Sincronización Visual)
 ToggleCham:Set(Config.Chams)
 ToggleOutline:Set(Config.Outline)
 ToggleHighlight:Set(Config.Highlight)
@@ -112,6 +112,13 @@ ToggleGunCham:Set(Config.GunCham)
 ToggleGunName:Set(Config.GunName)
 NameSizeSlider:Set(Config.NameSize)
 GunNameSizeSlider:Set(Config.GunNameSize)
+
+-- Forzar de forma nativa que los dropdowns marquen visualmente lo que el archivo JSON cargó
+if DropCham and DropCham.Set then DropCham:Set(Config.ChamsRoles) end
+if DropOutline and DropOutline.Set then DropOutline:Set(Config.OutlineRoles) end
+if DropHighlight and DropHighlight.Set then DropHighlight:Set(Config.HighlightRoles) end
+if DropBox and DropBox.Set then DropBox:Set(Config.BoxRoles) end
+if DropName and DropName.Set then DropName:Set(Config.NameRoles) end
 
 -- ============================================================================
 -- 🧠 MOTOR ULTRA-OPTIMIZADO CON FILTRADO INDEPENDIENTE POR COMPONENTE
@@ -172,7 +179,7 @@ local function updatePlayerESP(player)
     
     local color, currentStatus = getPlayerColorAndStatus(player)
 
-    -- 🟥 CONTROL BOX 2D (Verifica su propio interruptor y su dropdown específico)
+    -- 🟥 CONTROL BOX 2D
     local box = root:FindFirstChild("KH_2DBox")
     if Config.Box and Config.BoxRoles[currentStatus] == true then
         if not box then
@@ -199,7 +206,7 @@ local function updatePlayerESP(player)
         if box then box:Destroy() end
     end
 
-    -- 🏷️ CONTROL NAME JUGADORES (Verifica su propio interruptor y su dropdown específico)
+    -- 🏷️ CONTROL NAME JUGADORES
     local nameTag = root:FindFirstChild("KH_Name")
     if Config.Name and Config.NameRoles[currentStatus] == true then
         if not nameTag then
@@ -227,7 +234,7 @@ local function updatePlayerESP(player)
         if nameTag then nameTag:Destroy() end
     end
 
-    -- 🌟 CONTROL HIGHLIGHT / CHAM (Lógica cruzada e inteligente según los filtros de cada uno)
+    -- 🌟 CONTROL HIGHLIGHT / CHAM / OUTLINE
     local hl = char:FindFirstChild("KH_Highlight")
     
     local allowHighlight = Config.Highlight and Config.HighlightRoles[currentStatus] == true
