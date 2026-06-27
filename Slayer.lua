@@ -5,12 +5,12 @@
 local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
+local RunService = game:GetService("RunService") -- Optimización: Fluidez nativa a 60+ FPS
 
 local fileName = "KillerHubMM2Config.json"
 local LocalPlayer = Players.LocalPlayer
 
--- [1] TABLA DE CONFIGURACIÓN (Valores Predeterminados)
+-- [1] TABLA DE CONFIGURACIÓN (Con soporte para filtros de roles)
 local Config = { 
     Chams = false, 
     Outline = false, 
@@ -20,7 +20,14 @@ local Config = {
     GunCham = false,    
     GunName = false,    
     NameSize = 13,      
-    GunNameSize = 14    
+    GunNameSize = 14,
+    RolesFiltrados = {
+        ["Murderer"] = true,
+        ["Sheriff"] = true,
+        ["Hero"] = true,
+        ["Innocent"] = true,
+        ["Dead/None"] = true
+    }
 }
 
 -- [2] SISTEMA DE ALMACENAMIENTO LOCAL (Autoguardado)
@@ -37,13 +44,19 @@ if isfile and isfile(fileName) and readfile then
         local loaded = HttpService:JSONDecode(readfile(fileName))
         if type(loaded) == "table" then
             for k, v in pairs(loaded) do
-                Config[k] = v
+                if k == "RolesFiltrados" and type(v) == "table" then
+                    for role, state in pairs(v) do
+                        Config.RolesFiltrados[role] = state
+                    end
+                else
+                    Config[k] = v
+                end
             end
         end
     end)
 end
 
--- [3] INTERFAZ GRÁFICA INSTANTÁNEA
+-- [3] INTERFAZ GRÁFICA (Tus rutas originales intactas)
 local KillerHub = loadstring(game:HttpGet("https://raw.githubusercontent.com/Paolo0109/KillerHUB/refs/heads/main/InterfazBase.lua"))()
 local VisualsTab = KillerHub:CreateTab("Visuales", "rbxassetid://10747372517")
 
@@ -54,6 +67,17 @@ local ToggleOutline = VisualsTab:CreateToggle("EspOutline", "Habilitar ESP Outli
 local ToggleHighlight = VisualsTab:CreateToggle("EspHighlight", "Habilitar ESP Highlight (Completo)", function(val) Config.Highlight = val; saveConfig() end)
 local ToggleBox = VisualsTab:CreateToggle("EspBox", "Habilitar ESP Box (Marco 2D Delgado)", function(val) Config.Box = val; saveConfig() end)
 local ToggleName = VisualsTab:CreateToggle("EspName", "Habilitar ESP Name (Solo Nombre)", function(val) Config.Name = val; saveConfig() end)
+
+VisualsTab:CreateSection("Filtros de Objetivos Visuales")
+
+local RolesDropdown = VisualsTab:CreateMultiDropdown("EspRoleFilters", "Mostrar ESP solo en (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(tablaFlags)
+    for role, _ in pairs(Config.RolesFiltrados) do
+        if tablaFlags[role] ~= nil then
+            Config.RolesFiltrados[role] = tablaFlags[role]
+        end
+    end
+    saveConfig()
+end)
 
 VisualsTab:CreateSection("Murder Mystery 2 - Opciones ESP Pistola")
 
@@ -72,7 +96,7 @@ local GunNameSizeSlider = VisualsTab:CreateSlider("EspGunNameSize", "Tamaño del
     saveConfig()
 end)
 
--- [4] APLICAR ESTADOS GUARDADOS A LA INTERFAZ
+-- APLICAR ESTADOS GUARDADOS A LA INTERFAZ
 ToggleCham:Set(Config.Chams)
 ToggleOutline:Set(Config.Outline)
 ToggleHighlight:Set(Config.Highlight)
@@ -84,7 +108,7 @@ NameSizeSlider:Set(Config.NameSize)
 GunNameSizeSlider:Set(Config.GunNameSize)
 
 -- ============================================================================
--- 🧠 MOTOR ULTRA-OPTIMIZADO EVENT-DRIVEN (Zero Lag)
+-- 🧠 MOTOR ULTRA-OPTIMIZADO (Sincronización FPS & Escáner de Consola Dinámico)
 -- ============================================================================
 
 local playerRoles = {} 
@@ -96,42 +120,59 @@ local ColorMurderer = Color3.fromRGB(180, 55, 55)
 local ColorSheriff  = Color3.fromRGB(35, 102, 204)   
 local ColorHero     = Color3.fromRGB(230, 188, 62)  
 local ColorInnocent = Color3.fromRGB(26, 171, 81)   
-local ColorDead     = Color3.fromRGB(90, 90, 90)    
+local ColorDead     = Color3.fromRGB(115, 115, 115)    
 local ColorGunDrop  = Color3.fromRGB(255, 0, 0)     
 
--- 🔍 DETECTOR AVANZADO DE ROLES Y RESPALDO POR ARMAS
-local function getPlayerColor(player)
+-- 🔍 DETECTOR AVANZADO DE ROLES Y FILTRADO POR ESTADO
+local function getPlayerColorAndStatus(player)
     local char = player.Character
     local name = player.Name
     
     local isDeadInNetwork = playerDeadStatus[name] == true
     local isDeadInGame = char and char:FindFirstChild("Humanoid") and char.Humanoid.Health <= 0
+    local role = playerRoles[name]
+    local hasNoRole = (role == nil or role == "" or role == "Spectator")
 
-    if isDeadInNetwork or isDeadInGame then
-        return ColorDead
+    if isDeadInNetwork or isDeadInGame or hasNoRole then
+        return ColorDead, "Dead/None"
     end
 
-    -- Escaneo rápido de inventario por si los remotos fallan o tardan en actualizar
     local backpack = player:FindFirstChild("Backpack")
     local hasKnife = (char and char:FindFirstChild("Knife")) or (backpack and backpack:FindFirstChild("Knife"))
     local hasGun = (char and (char:FindFirstChild("Gun") or char:FindFirstChild("Revolver"))) or 
                    (backpack and (backpack:FindFirstChild("Gun") or backpack:FindFirstChild("Revolver")))
 
-    if hasKnife then playerRoles[name] = "Murderer" end
+    if hasKnife then 
+        playerRoles[name] = "Murderer"
+        return ColorMurderer, "Murderer"
+    end
 
-    local role = playerRoles[name]
     if role == "Murderer" then 
-        return ColorMurderer 
+        return ColorMurderer, "Murderer"
     elseif role == "Sheriff" then 
-        return ColorSheriff
+        return ColorSheriff, "Sheriff"
     elseif hasGun or role == "Hero" then 
-        return ColorHero 
+        return ColorHero, "Hero"
     else 
-        return ColorInnocent 
+        return ColorInnocent, "Innocent"
     end
 end
 
--- 📡 CONTROLADOR DE ACTUALIZACIÓN INDIVIDUAL DE ESP
+-- Ocultación limpia (Evita lag de Garbage Collection al no usar :Destroy constantemente)
+local function hidePlayerESP(char, root)
+    if root then
+        local box = root:FindFirstChild("KH_2DBox")
+        if box then box.Enabled = false end
+        local nameTag = root:FindFirstChild("KH_Name")
+        if nameTag then nameTag.Enabled = false end
+    end
+    if char then
+        local hl = char:FindFirstChild("KH_Highlight")
+        if hl then hl.Enabled = false end
+    end
+end
+
+-- 🛠️ RENDERIZADOR INTEGRADO JUGADORES (Alineado con los FPS)
 local function updatePlayerESP(player)
     if player == LocalPlayer then return end
     local char = player.Character
@@ -140,7 +181,12 @@ local function updatePlayerESP(player)
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return end
     
-    local color = getPlayerColor(player)
+    local color, currentStatus = getPlayerColorAndStatus(player)
+
+    if Config.RolesFiltrados[currentStatus] == false then
+        hidePlayerESP(char, root)
+        return
+    end
 
     -- 🟥 CONTROL BOX 2D
     local box = root:FindFirstChild("KH_2DBox")
@@ -165,8 +211,9 @@ local function updatePlayerESP(player)
             box.Parent = root
         end
         box.Frame.Outline.Color = color
+        box.Enabled = true
     else
-        if box then box:Destroy() end
+        if box then box.Enabled = false end
     end
 
     -- 🏷️ CONTROL NAME JUGADORES
@@ -193,8 +240,9 @@ local function updatePlayerESP(player)
         nameTag.Display.Text = player.Name
         nameTag.Display.TextColor3 = color
         nameTag.Display.TextSize = Config.NameSize
+        nameTag.Enabled = true
     else
-        if nameTag then nameTag:Destroy() end
+        if nameTag then nameTag.Enabled = false end
     end
 
     -- 🌟 CONTROL HIGHLIGHT / CHAM JUGADORES
@@ -208,6 +256,7 @@ local function updatePlayerESP(player)
         end
         
         hl.Adornee = char
+        hl.Enabled = true
         
         if Config.Highlight then
             hl.FillColor = color
@@ -224,19 +273,35 @@ local function updatePlayerESP(player)
             hl.OutlineTransparency = 0
         end
     else
-        if hl then hl:Destroy() end
+        if hl then hl.Enabled = false end
     end
 end
 
--- 📡 ESCÁNER EFICIENTE DE PISTOLA TIRADA
-local function processGunDrop(part)
-    if part and part.Name == "GunDrop" and part:IsA("BasePart") then
-        currentGunDrop = part
+-- 📡 ESCÁNER DE LA PISTOLA (Resuelve rutas dinámicas de mapas de forma universal)
+local function checkGunInstance(part)
+    if part and part:IsA("BasePart") then
+        if part.Name == "GunDrop" or part.Name == "GunDisplay" then
+            currentGunDrop = part
+        end
     end
 end
+workspace.ChildAdded:Connect(checkGunInstance)
 
 local function updateGunESP()
-    if currentGunDrop and currentGunDrop:IsDescendantOf(workspace) then
+    -- Si no hay referencia válida, busca de forma recursiva ignorando carpetas intermitentes (como Hotel, Mansion, etc.)
+    if not currentGunDrop or not currentGunDrop:IsDescendantOf(workspace) then
+        currentGunDrop = workspace:FindFirstChild("GunDrop", true)
+        
+        if not currentGunDrop then
+            -- Mapeo directo basado en el output de tu consola: WeaponDisplays.GunDisplay
+            local weaponDisplays = workspace:FindFirstChild("WeaponDisplays", true)
+            if weaponDisplays then
+                currentGunDrop = weaponDisplays:FindFirstChild("GunDisplay")
+            end
+        end
+    end
+
+    if currentGunDrop and currentGunDrop:IsA("BasePart") then
         -- 🔴 ESP Cham Pistola
         local hl = currentGunDrop:FindFirstChild("KH_GunHighlight")
         if Config.GunCham then
@@ -250,8 +315,9 @@ local function updateGunESP()
             hl.FillColor = ColorGunDrop
             hl.FillTransparency = 0         
             hl.OutlineTransparency = 1      
+            hl.Enabled = true
         else
-            if hl then hl:Destroy() end
+            if hl then hl.Enabled = false end
         end
 
         -- 🩸 ESP Name Pistola
@@ -279,15 +345,14 @@ local function updateGunESP()
                 nameTag.Parent = currentGunDrop
             end
             nameTag.Display.TextSize = Config.GunNameSize
+            nameTag.Enabled = true
         else
-            if nameTag then nameTag:Destroy() end
+            if nameTag then nameTag.Enabled = false end
         end
-    else
-        currentGunDrop = nil
     end
 end
 
--- 📡 CAPTURADOR DE RED (Remotes)
+-- 📡 CAPTURADOR DE RED (Remotes de Intercepción)
 local PlayerDataChanged = ReplicatedStorage:FindFirstChild("PlayerDataChanged", true)
 local RoundStart = ReplicatedStorage:FindFirstChild("RoundStart", true)
 
@@ -316,25 +381,38 @@ if RoundStart and RoundStart:IsA("RemoteEvent") then
     end)
 end
 
--- 🧹 RECOLECTOR DE BASURA (Evita Memory Leaks)
+-- Limpieza preventiva de elementos visuales cuando el personaje se regenera
+local function cleanCharacterESP(character)
+    local hl = character:FindFirstChild("KH_Highlight")
+    if hl then hl:Destroy() end
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if root then
+        local box = root:FindFirstChild("KH_2DBox")
+        if box then box:Destroy() end
+        local nt = root:FindFirstChild("KH_Name")
+        if nt then nt:Destroy() end
+    end
+end
+
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterRemoving:Connect(cleanCharacterESP)
+end)
+
+for _, player in pairs(Players:GetPlayers()) do
+    player.CharacterRemoving:Connect(cleanCharacterESP)
+end
+
 Players.PlayerRemoving:Connect(function(player)
     playerRoles[player.Name] = nil
     playerDeadStatus[player.Name] = nil
 end)
 
--- 👁️ ESCUCHA INTELIGENTE DE INSTANCIAS DE PISTOLA
-workspace.ChildAdded:Connect(processGunDrop)
-for _, v in pairs(workspace:GetDescendants()) do processGunDrop(v) end
-
--- 🕒 LOOP UNIFICADO BASADO EN TIEMPO (Estable y sin micro-stuttering)
-task.spawn(function()
-    while true do
-        for _, p in pairs(Players:GetPlayers()) do
-            pcall(updatePlayerESP, p)
-        end
-        pcall(updateGunESP)
-        task.wait(0.15) -- Frecuencia óptima para balancear respuesta visual y rendimiento
+-- 🕒 BUCLE DE RENDERIZADO CORREGIDO (Cero retrasos en movimiento, optimizado para FPS altos)
+RunService.Heartbeat:Connect(function()
+    for _, p in pairs(Players:GetPlayers()) do
+        pcall(updatePlayerESP, p)
     end
+    pcall(updateGunESP)
 end)
 
 return KillerHub
