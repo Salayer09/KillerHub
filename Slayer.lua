@@ -48,9 +48,9 @@ if isfile and isfile(fileName) and readfile then
     end)
 end
 
--- [3] INTERFAZ GRÁFICA (Interruptor + Multi-Dropdown por cada ESP)
+-- [3] INTERFAZ GRÁFICA (Actualizada a Framework V3.1)
 local KillerHub = loadstring(game:HttpGet("https://raw.githubusercontent.com/Paolo0109/KillerHUB/refs/heads/main/InterfazBase.lua"))()
-local VisualsTab = KillerHub:CreateTab("Visuales", "rbxassetid://10747372517")
+local VisualsTab = KillerHub:CreateTab("Visuales")
 
 VisualsTab:CreateSection("Murder Mystery 2 - Opciones ESP Jugadores")
 
@@ -92,12 +92,13 @@ local ToggleGunName = VisualsTab:CreateToggle("EspGunName", "Habilitar ESP Gun N
 
 VisualsTab:CreateSection("Ajustes de Tamaño (Texto)")
 
-local NameSizeSlider = VisualsTab:CreateSlider("EspNameSize", "Tamaño del ESP Name (Jugadores)", 10, 30, function(val)
+-- Actualizados con el parámetro de incremento (step) en 1 requerido por la API V3.1
+local NameSizeSlider = VisualsTab:CreateSlider("EspNameSize", "Tamaño del ESP Name (Jugadores)", 10, 30, 1, function(val)
     Config.NameSize = math.floor(val)
     saveConfig()
 end)
 
-local GunNameSizeSlider = VisualsTab:CreateSlider("EspGunNameSize", "Tamaño del ESP Gun Name", 10, 30, function(val)
+local GunNameSizeSlider = VisualsTab:CreateSlider("EspGunNameSize", "Tamaño del ESP Gun Name", 10, 30, 1, function(val)
     Config.GunNameSize = math.floor(val)
     saveConfig()
 end)
