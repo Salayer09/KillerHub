@@ -1,83 +1,139 @@
 -- ============================================================================
--- 👁️ KILLER HUB - MM2 ADVANCED VISUALS (UNIVERSAL GUN TRACKER & AUTO-SAVE V2.6)
+-- 👁️ KILLER HUB - MM2 ADVANCED VISUALS (UNIVERSAL GUN TRACKER & AUTO-SAVE)
 -- ============================================================================
 
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local fileName = "KillerHubMM2Config.json"
 local LocalPlayer = Players.LocalPlayer
 
--- [1] CARGA DEL CORE ORIGINAL Y PERSISTENCIA NATIVA
-local KillerHub = loadstring(game:HttpGet("https://raw.githubusercontent.com/Paolo0109/KillerHUB/refs/heads/main/InterfazBase.lua"))()
-KillerHub:EnableAutosave("MurderMystery2_Config.json")
-KillerHub:SetTheme("Blood")
+-- [1] TABLA DE CONFIGURACIÓN (Filtros independientes por cada ESP)
+local Config = { 
+    Chams = false, ChamsRoles = {["Murderer"] = true, ["Sheriff"] = true, ["Hero"] = true, ["Innocent"] = true, ["Dead/None"] = true},
+    Outline = false, OutlineRoles = {["Murderer"] = true, ["Sheriff"] = true, ["Hero"] = true, ["Innocent"] = true, ["Dead/None"] = true},
+    Highlight = false, HighlightRoles = {["Murderer"] = true, ["Sheriff"] = true, ["Hero"] = true, ["Innocent"] = true, ["Dead/None"] = true},
+    Box = false, BoxRoles = {["Murderer"] = true, ["Sheriff"] = true, ["Hero"] = true, ["Innocent"] = true, ["Dead/None"] = true},
+    Name = false, NameRoles = {["Murderer"] = true, ["Sheriff"] = true, ["Hero"] = true, ["Innocent"] = true, ["Dead/None"] = true},
+    GunCham = false,    
+    GunName = false,    
+    NameSize = 13,      
+    GunNameSize = 14    
+}
 
--- [2] CREACIÓN DE PESTAÑA VISUALES
+-- [2] SISTEMA DE ALMAZENAMIENTO LOCAL (Autoguardado Seguro)
+local function saveConfig()
+    if writefile then
+        pcall(function()
+            writefile(fileName, HttpService:JSONEncode(Config))
+        end)
+    end
+end
+
+if isfile and isfile(fileName) and readfile then
+    pcall(function()
+        local loaded = HttpService:JSONDecode(readfile(fileName))
+        if type(loaded) == "table" then
+            for k, v in pairs(loaded) do
+                if type(v) == "table" then
+                    for subKey, subVal in pairs(v) do
+                        if Config[k] then Config[k][subKey] = subVal end
+                    end
+                else
+                    Config[k] = v
+                end
+            end
+        end
+    end)
+end
+
+-- [3] INTERFAZ GRÁFICA (Interruptor + Multi-Dropdown por cada ESP)
+local KillerHub = loadstring(game:HttpGet("https://raw.githubusercontent.com/Paolo0109/KillerHUB/refs/heads/main/InterfazBase.lua"))()
 local VisualsTab = KillerHub:CreateTab("Visuales", "rbxassetid://10747372517")
 
 VisualsTab:CreateSection("Murder Mystery 2 - Opciones ESP Jugadores")
 
 -- 1. CHAMS ESP
-VisualsTab:CreateToggle("EspCham", "Habilitar ESP Cham (Relleno Completo)", false, function(_) end)
-VisualsTab:CreateMultiDropdown("ChamFilters", "└─ Aplicar Cham a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(_) end)
+local ToggleCham = VisualsTab:CreateToggle("EspCham", "Habilitar ESP Cham (Relleno Completo)", function(val) Config.Chams = val; saveConfig() end)
+local DropCham = VisualsTab:CreateMultiDropdown("ChamFilters", "└─ Aplicar Cham a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
+    for r, _ in pairs(Config.ChamsRoles) do if flags[r] ~= nil then Config.ChamsRoles[r] = flags[r] end end; saveConfig()
+end)
 
 -- 2. OUTLINE ESP
-VisualsTab:CreateToggle("EspOutline", "Habilitar ESP Outline (Contorno)", false, function(_) end)
-VisualsTab:CreateMultiDropdown("OutlineFilters", "└─ Aplicar Outline a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(_) end)
+local ToggleOutline = VisualsTab:CreateToggle("EspOutline", "Habilitar ESP Outline (Contorno)", function(val) Config.Outline = val; saveConfig() end)
+local DropOutline = VisualsTab:CreateMultiDropdown("OutlineFilters", "└─ Aplicar Outline a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
+    for r, _ in pairs(Config.OutlineRoles) do if flags[r] ~= nil then Config.OutlineRoles[r] = flags[r] end end; saveConfig()
+end)
 
 -- 3. HIGHLIGHT ESP
-VisualsTab:CreateToggle("EspHighlight", "Habilitar ESP Highlight (Completo)", false, function(_) end)
-VisualsTab:CreateMultiDropdown("HighlightFilters", "└─ Aplicar Highlight a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(_) end)
+local ToggleHighlight = VisualsTab:CreateToggle("EspHighlight", "Habilitar ESP Highlight (Completo)", function(val) Config.Highlight = val; saveConfig() end)
+local DropHighlight = VisualsTab:CreateMultiDropdown("HighlightFilters", "└─ Aplicar Highlight a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
+    for r, _ in pairs(Config.HighlightRoles) do if flags[r] ~= nil then Config.HighlightRoles[r] = flags[r] end end; saveConfig()
+end)
 
 -- 4. BOX ESP
-VisualsTab:CreateToggle("EspBox", "Habilitar ESP Box (Marco 2D Delgado)", false, function(_) end)
-VisualsTab:CreateMultiDropdown("BoxFilters", "└─ Aplicar Box a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(_) end)
+local ToggleBox = VisualsTab:CreateToggle("EspBox", "Habilitar ESP Box (Marco 2D Delgado)", function(val) Config.Box = val; saveConfig() end)
+local DropBox = VisualsTab:CreateMultiDropdown("BoxFilters", "└─ Aplicar Box a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
+    for r, _ in pairs(Config.BoxRoles) do if flags[r] ~= nil then Config.BoxRoles[r] = flags[r] end end; saveConfig()
+end)
 
 -- 5. NAME ESP
-VisualsTab:CreateToggle("EspName", "Habilitar ESP Name (Solo Nombre)", false, function(_) end)
-VisualsTab:CreateMultiDropdown("NameFilters", "└─ Aplicar Name a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(_) end)
+local ToggleName = VisualsTab:CreateToggle("EspName", "Habilitar ESP Name (Solo Nombre)", function(val) Config.Name = val; saveConfig() end)
+local DropName = VisualsTab:CreateMultiDropdown("NameFilters", "└─ Aplicar Name a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
+    for r, _ in pairs(Config.NameRoles) do if flags[r] ~= nil then Config.NameRoles[r] = flags[r] end end; saveConfig()
+end)
 
 
 VisualsTab:CreateSection("Murder Mystery 2 - Opciones ESP Pistola")
 
-VisualsTab:CreateToggle("EspGunCham", "Habilitar ESP Gun (Pistola en Suelo)", false, function(_) end)
-VisualsTab:CreateToggle("EspGunName", "Habilitar ESP Gun Name (Texto Pistola)", false, function(_) end)
-
+local ToggleGunCham = VisualsTab:CreateToggle("EspGunCham", "Habilitar ESP Gun (Pistola en Suelo)", function(val) Config.GunCham = val; saveConfig() end)
+local ToggleGunName = VisualsTab:CreateToggle("EspGunName", "Habilitar ESP Gun Name (Texto Pistola)", function(val) Config.GunName = val; saveConfig() end)
 
 VisualsTab:CreateSection("Ajustes de Tamaño (Texto)")
 
-VisualsTab:CreateSlider("EspNameSize", "Tamaño del ESP Name (Jugadores)", 10, 30, 13, function(_) end)
-VisualsTab:CreateSlider("EspGunNameSize", "Tamaño del ESP Gun Name", 10, 30, 14, function(_) end)
+local NameSizeSlider = VisualsTab:CreateSlider("EspNameSize", "Tamaño del ESP Name (Jugadores)", 10, 30, function(val)
+    Config.NameSize = math.floor(val)
+    saveConfig()
+end)
 
+local GunNameSizeSlider = VisualsTab:CreateSlider("EspGunNameSize", "Tamaño del ESP Gun Name", 10, 30, function(val)
+    Config.GunNameSize = math.floor(val)
+    saveConfig()
+end)
+
+-- [4] APLICAR ESTADOS GUARDADOS A LA INTERFAZ (Forzar Sincronización Visual)
+ToggleCham:Set(Config.Chams)
+ToggleOutline:Set(Config.Outline)
+ToggleHighlight:Set(Config.Highlight)
+ToggleBox:Set(Config.Box)
+ToggleName:Set(Config.Name)
+ToggleGunCham:Set(Config.GunCham)
+ToggleGunName:Set(Config.GunName)
+NameSizeSlider:Set(Config.NameSize)
+GunNameSizeSlider:Set(Config.GunNameSize)
+
+-- Forzar de forma nativa que los dropdowns marquen visualmente lo que el archivo JSON cargó
+if DropCham and DropCham.Set then DropCham:Set(Config.ChamsRoles) end
+if DropOutline and DropOutline.Set then DropOutline:Set(Config.OutlineRoles) end
+if DropHighlight and DropHighlight.Set then DropHighlight:Set(Config.HighlightRoles) end
+if DropBox and DropBox.Set then DropBox:Set(Config.BoxRoles) end
+if DropName and DropName.Set then DropName:Set(Config.NameRoles) end
 
 -- ============================================================================
--- 🧠 MOTOR ULTRA-OPTIMIZADO CON EXTRACCIÓN SEGURA DE BANDERAS (V2.6)
+-- 🧠 MOTOR ULTRA-OPTIMIZADO CON FILTRADO INDEPENDIENTE POR COMPONENTE
 -- ============================================================================
 
 local playerRoles = {} 
 local playerDeadStatus = {} 
 local currentGunDrop = nil 
 
-local ColorMurderer = Color3.fromRGB(180, 55, 55)   
-local ColorSheriff  = Color3.fromRGB(35, 102, 204)   
-local ColorHero     = Color3.fromRGB(230, 188, 62)  
-local ColorInnocent = Color3.fromRGB(26, 171, 81)   
+local ColorMurderer = Color3.fromRGB(172, 57, 57)   
+local ColorSheriff  = Color3.fromRGB(52, 115, 209)   
+local ColorHero     = Color3.fromRGB(217, 179, 67)  
+local ColorInnocent = Color3.fromRGB(67, 171, 96)   
 local ColorDead     = Color3.fromRGB(115, 115, 115)   
 local ColorGunDrop  = Color3.fromRGB(255, 0, 0)     
-
--- Función utilitaria para leer de manera segura las Flags de KillerHub
-local function getFlagValue(flagName, subKey)
-    if KillerHub.Flags and KillerHub.Flags[flagName] then
-        local flag = KillerHub.Flags[flagName]
-        if subKey then
-            -- Para MultiDropdowns / tablas
-            return flag.CurrentValue and flag.CurrentValue[subKey] or false
-        else
-            -- Para Toggles y Sliders
-            return flag.CurrentValue
-        end
-    end
-    return false
-end
 
 local function getPlayerColorAndStatus(player)
     local char = player.Character
@@ -125,7 +181,7 @@ local function updatePlayerESP(player)
 
     -- 🟥 CONTROL BOX 2D
     local box = root:FindFirstChild("KH_2DBox")
-    if getFlagValue("EspBox") and getFlagValue("BoxFilters", currentStatus) then
+    if Config.Box and Config.BoxRoles[currentStatus] == true then
         if not box then
             box = Instance.new("BillboardGui")
             box.Name = "KH_2DBox"
@@ -152,7 +208,7 @@ local function updatePlayerESP(player)
 
     -- 🏷️ CONTROL NAME JUGADORES
     local nameTag = root:FindFirstChild("KH_Name")
-    if getFlagValue("EspName") and getFlagValue("NameFilters", currentStatus) then
+    if Config.Name and Config.NameRoles[currentStatus] == true then
         if not nameTag then
             nameTag = Instance.new("BillboardGui")
             nameTag.Name = "KH_Name"
@@ -173,7 +229,7 @@ local function updatePlayerESP(player)
         end
         nameTag.Display.Text = player.Name
         nameTag.Display.TextColor3 = color
-        nameTag.Display.TextSize = getFlagValue("EspNameSize") or 13
+        nameTag.Display.TextSize = Config.NameSize
     else
         if nameTag then nameTag:Destroy() end
     end
@@ -181,9 +237,9 @@ local function updatePlayerESP(player)
     -- 🌟 CONTROL HIGHLIGHT / CHAM / OUTLINE
     local hl = char:FindFirstChild("KH_Highlight")
     
-    local allowHighlight = getFlagValue("EspHighlight") and getFlagValue("HighlightFilters", currentStatus)
-    local allowChams = getFlagValue("EspCham") and getFlagValue("ChamFilters", currentStatus)
-    local allowOutline = getFlagValue("EspOutline") and getFlagValue("OutlineFilters", currentStatus)
+    local allowHighlight = Config.Highlight and Config.HighlightRoles[currentStatus] == true
+    local allowChams = Config.Chams and Config.ChamsRoles[currentStatus] == true
+    local allowOutline = Config.Outline and Config.OutlineRoles[currentStatus] == true
 
     if allowHighlight or allowChams or allowOutline then
         if not hl then
@@ -227,18 +283,16 @@ local function updateGunESP()
 
     if currentGunDrop and currentGunDrop:IsA("BasePart") then
         local hl = currentGunDrop:FindFirstChild("KH_GunHighlight")
-        if getFlagValue("EspGunCham") then
+        if Config.GunCham then
             if not hl then
                 hl = Instance.new("Highlight"); hl.Name = "KH_GunHighlight"
                 hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop; hl.Adornee = currentGunDrop; hl.Parent = currentGunDrop
             end
             hl.FillColor = ColorGunDrop; hl.FillTransparency = 0; hl.OutlineTransparency = 1      
-        else 
-            if hl then hl:Destroy() end 
-        end
+        else if hl then hl:Destroy() end end
 
         local nameTag = currentGunDrop:FindFirstChild("KH_GunName")
-        if getFlagValue("EspGunName") then
+        if Config.GunName then
             if not nameTag then
                 nameTag = Instance.new("BillboardGui"); nameTag.Name = "KH_GunName"
                 nameTag.Size = UDim2.new(0, 180, 0, 40); nameTag.StudsOffset = Vector3.new(0, 2.5, 0); nameTag.AlwaysOnTop = true
@@ -246,10 +300,8 @@ local function updateGunESP()
                 label.Font = Enum.Font.SourceSansBold; label.TextStrokeTransparency = 0.1; label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
                 label.TextColor3 = ColorGunDrop; label.Text = "GUN HERE 🩸"; label.Parent = nameTag; nameTag.Adornee = currentGunDrop; nameTag.Parent = currentGunDrop
             end
-            nameTag.Display.TextSize = getFlagValue("EspGunNameSize") or 14
-        else 
-            if nameTag then nameTag:Destroy() end 
-        end
+            nameTag.Display.TextSize = Config.GunNameSize
+        else if nameTag then nameTag:Destroy() end end
     end
 end
 
@@ -289,7 +341,4 @@ task.spawn(function()
     end
 end)
 
--- ============================================================================
--- 🔗 RETORNO DE API CORRECTO (V2.6)
--- ============================================================================
 return KillerHub
