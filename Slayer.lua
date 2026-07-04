@@ -1,5 +1,5 @@
 -- ============================================================================
--- 👁️ KILLER HUB - MM2 ADVANCED VISUALS (UNIVERSAL GUN TRACKER)
+-- 👁️ KILLER HUB - MM2 ADVANCED VISUALS (UNIVERSAL GUN TRACKER & AUTO-SAVE)
 -- ============================================================================
 
 local HttpService = game:GetService("HttpService")
@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 
+local fileName = "KillerHubMM2Config.json"
 local LocalPlayer = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
@@ -21,7 +22,7 @@ local DefaultColors = {
     GunDrop  = Color3.fromRGB(255, 0, 0)
 }
 
--- [1] TABLA DE CONFIGURACIÓN AMPLIADA (Sin Auto-Guardado Local)
+-- [1] TABLA DE CONFIGURACIÓN AMPLIADA
 local Config = { 
     Chams = false, ChamsRoles = {["Murderer"] = false, ["Sheriff"] = false, ["Hero"] = false, ["Innocent"] = false, ["Dead/None"] = false},
     Outline = false, OutlineRoles = {["Murderer"] = false, ["Sheriff"] = false, ["Hero"] = false, ["Innocent"] = false, ["Dead/None"] = false},
@@ -46,42 +47,68 @@ local Config = {
     }
 }
 
--- [2] INTERFAZ GRÁFICA (Llamados a saveConfig eliminados)
+-- [2] SISTEMA DE ALMACENAMIENTO LOCAL
+local function saveConfig()
+    if writefile then
+        pcall(function()
+            writefile(fileName, HttpService:JSONEncode(Config))
+        end)
+    end
+end
+
+if isfile and isfile(fileName) and readfile then
+    pcall(function()
+        local loaded = HttpService:JSONDecode(readfile(fileName))
+        if type(loaded) == "table" then
+            for k, v in pairs(loaded) do
+                if type(v) == "table" then
+                    for subKey, subVal in pairs(v) do
+                        if Config[k] then Config[k][subKey] = subVal end
+                    end
+                else
+                    Config[k] = v
+                end
+            end
+        end
+    end)
+end
+
+-- [3] INTERFAZ GRÁFICA
 local KillerHub = loadstring(game:HttpGet("https://raw.githubusercontent.com/Paolo0109/KillerHUB/refs/heads/main/InterfazBase.lua"))()
 local VisualsTab = KillerHub:CreateTab("Visuales", "rbxassetid://10747372517")
 
 VisualsTab:CreateSection("Murder Mystery 2 - Opciones ESP Jugadores")
 
-local ToggleCham = VisualsTab:CreateToggle("EspCham", "Habilitar ESP Cham (Relleno Completo)", function(val) Config.Chams = val end)
+local ToggleCham = VisualsTab:CreateToggle("EspCham", "Habilitar ESP Cham (Relleno Completo)", function(val) Config.Chams = val; saveConfig() end)
 local DropCham = VisualsTab:CreateMultiDropdown("ChamFilters", "└─ Aplicar Cham a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
-    for r, _ in pairs(Config.ChamsRoles) do Config.ChamsRoles[r] = flags[r] == true end
+    for r, _ in pairs(Config.ChamsRoles) do Config.ChamsRoles[r] = flags[r] == true end; saveConfig()
 end)
 
-local ToggleOutline = VisualsTab:CreateToggle("EspOutline", "Habilitar ESP Outline (Contorno)", function(val) Config.Outline = val end)
+local ToggleOutline = VisualsTab:CreateToggle("EspOutline", "Habilitar ESP Outline (Contorno)", function(val) Config.Outline = val; saveConfig() end)
 local DropOutline = VisualsTab:CreateMultiDropdown("OutlineFilters", "└─ Aplicar Outline a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
-    for r, _ in pairs(Config.OutlineRoles) do Config.OutlineRoles[r] = flags[r] == true end
+    for r, _ in pairs(Config.OutlineRoles) do Config.OutlineRoles[r] = flags[r] == true end; saveConfig()
 end)
 
-local ToggleHighlight = VisualsTab:CreateToggle("EspHighlight", "Habilitar ESP Highlight (Completo)", function(val) Config.Highlight = val end)
+local ToggleHighlight = VisualsTab:CreateToggle("EspHighlight", "Habilitar ESP Highlight (Completo)", function(val) Config.Highlight = val; saveConfig() end)
 local DropHighlight = VisualsTab:CreateMultiDropdown("HighlightFilters", "└─ Aplicar Highlight a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
-    for r, _ in pairs(Config.HighlightRoles) do Config.HighlightRoles[r] = flags[r] == true end
+    for r, _ in pairs(Config.HighlightRoles) do Config.HighlightRoles[r] = flags[r] == true end; saveConfig()
 end)
 
-local ToggleBox = VisualsTab:CreateToggle("EspBox", "Habilitar ESP Box (Marco 2D Delgado)", function(val) Config.Box = val end)
+local ToggleBox = VisualsTab:CreateToggle("EspBox", "Habilitar ESP Box (Marco 2D Delgado)", function(val) Config.Box = val; saveConfig() end)
 local DropBox = VisualsTab:CreateMultiDropdown("BoxFilters", "└─ Aplicar Box a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
-    for r, _ in pairs(Config.BoxRoles) do Config.BoxRoles[r] = flags[r] == true end
+    for r, _ in pairs(Config.BoxRoles) do Config.BoxRoles[r] = flags[r] == true end; saveConfig()
 end)
 
-local ToggleName = VisualsTab:CreateToggle("EspName", "Habilitar ESP Name (Solo Nombre)", function(val) Config.Name = val end)
+local ToggleName = VisualsTab:CreateToggle("EspName", "Habilitar ESP Name (Solo Nombre)", function(val) Config.Name = val; saveConfig() end)
 local DropName = VisualsTab:CreateMultiDropdown("NameFilters", "└─ Aplicar Name a (Múltiple):", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
-    for r, _ in pairs(Config.NameRoles) do Config.NameRoles[r] = flags[r] == true end
+    for r, _ in pairs(Config.NameRoles) do Config.NameRoles[r] = flags[r] == true end; saveConfig()
 end)
 
 VisualsTab:CreateSection("Murder Mystery 2 - Opciones ESP Pistola")
 
-local ToggleGunCham = VisualsTab:CreateToggle("EspGunCham", "Habilitar ESP Gun (Pistola en Suelo)", function(val) Config.GunCham = val end)
-local ToggleGunName = VisualsTab:CreateToggle("EspGunName", "Habilitar ESP Gun Name (Texto Pistola)", function(val) Config.GunName = val end)
-local ToggleGunTracer = VisualsTab:CreateToggle("EspGunTracer", "Habilitar Tracer de Pistola (Línea)", function(val) Config.GunTracer = val end)
+local ToggleGunCham = VisualsTab:CreateToggle("EspGunCham", "Habilitar ESP Gun (Pistola en Suelo)", function(val) Config.GunCham = val; saveConfig() end)
+local ToggleGunName = VisualsTab:CreateToggle("EspGunName", "Habilitar ESP Gun Name (Texto Pistola)", function(val) Config.GunName = val; saveConfig() end)
+local ToggleGunTracer = VisualsTab:CreateToggle("EspGunTracer", "Habilitar Tracer de Pistola (Línea)", function(val) Config.GunTracer = val; saveConfig() end)
 
 VisualsTab:CreateSection("Personalización de Colores de Roles")
 
@@ -91,9 +118,10 @@ local function createRoleColorPicker(roleKey, visualName)
     
     VisualsTab:CreateToggleColorPicker(
         "CP_Active_" .. roleKey, "CP_Color_" .. roleKey, "Color Personalizado: " .. visualName, defaultColor3,
-        function(estado) Config.CustomColorsActive[roleKey] = estado end,
+        function(estado) Config.CustomColorsActive[roleKey] = estado; saveConfig() end,
         function(colorSeleccionado)
             Config.CustomColorsRGB[roleKey] = {math.floor(colorSeleccionado.R * 255), math.floor(colorSeleccionado.G * 255), math.floor(colorSeleccionado.B * 255)}
+            saveConfig()
         end
     )
 end
@@ -109,12 +137,13 @@ VisualsTab:CreateSection("Ajustes de Tamaño y Rendimiento")
 
 local DistanceSlider = VisualsTab:CreateSlider("EspMaxDistance", "Distancia Máxima de Renderizado", 100, 1000, function(val)
     Config.MaxDistance = math.floor(val)
+    saveConfig()
 end)
 
-local NameSizeSlider = VisualsTab:CreateSlider("EspNameSize", "Tamaño del ESP Name (Jugadores)", 10, 30, function(val) Config.NameSize = math.floor(val) end)
-local GunNameSizeSlider = VisualsTab:CreateSlider("EspGunNameSize", "Tamaño del ESP Gun Name", 10, 30, function(val) Config.GunNameSize = math.floor(val) end)
+local NameSizeSlider = VisualsTab:CreateSlider("EspNameSize", "Tamaño del ESP Name (Jugadores)", 10, 30, function(val) Config.NameSize = math.floor(val); saveConfig() end)
+local GunNameSizeSlider = VisualsTab:CreateSlider("EspGunNameSize", "Tamaño del ESP Gun Name", 10, 30, function(val) Config.GunNameSize = math.floor(val); saveConfig() end)
 
--- [3] APLICAR ESTADOS INICIALES DE LA TABLA CONFIG
+-- [4] APLICAR ESTADOS GUARDADOS
 ToggleCham:Set(Config.Chams); ToggleOutline:Set(Config.Outline); ToggleHighlight:Set(Config.Highlight); ToggleBox:Set(Config.Box); ToggleName:Set(Config.Name)
 ToggleGunCham:Set(Config.GunCham); ToggleGunName:Set(Config.GunName); ToggleGunTracer:Set(Config.GunTracer); DistanceSlider:Set(Config.MaxDistance); NameSizeSlider:Set(Config.NameSize); GunNameSizeSlider:Set(Config.GunNameSize)
 
@@ -209,7 +238,7 @@ local function updatePlayerESP(player)
     -- 📏 VALIDACIÓN DE DISTANCIA CRÍTICA
     local distance = (myRoot.Position - root.Position).Magnitude
     if distance > Config.MaxDistance then
-        clearPlayerESP(char)
+        clearPlayerESP(char) -- Borra elementos del motor si se aleja para ahorrar 100% recursos
         return
     end
     
@@ -282,6 +311,7 @@ local function updateGunESP()
     local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if currentGunDrop and currentGunDrop:IsA("BasePart") and myRoot then
         
+        -- Verificar si la pistola también está fuera del rango máximo
         local distance = (myRoot.Position - currentGunDrop.Position).Magnitude
         if distance > Config.MaxDistance then
             local hl = currentGunDrop:FindFirstChild("KH_GunHighlight")
@@ -306,7 +336,7 @@ local function updateGunESP()
             if not nameTag then
                 nameTag = Instance.new("BillboardGui"); nameTag.Name = "KH_GunName"; nameTag.Size = UDim2.new(0, 180, 0, 40); nameTag.StudsOffset = Vector3.new(0, 2.5, 0); nameTag.AlwaysOnTop = true
                 local label = Instance.new("TextLabel"); label.Name = "Display"; label.Size = UDim2.new(1, 0, 1, 0); label.BackgroundTransparency = 1
-                label.Font = Enum.Font.SourceSansBold; label.TextStrokeTransparency = 0.1; label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0); label.Text = "GunDrop Here"; label.Parent = nameTag
+                label.Font = Enum.Font.SourceSansBold; label.TextStrokeTransparency = 0.1; label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0); label.Text = "GUN HERE 🩸"; label.Parent = nameTag
                 nameTag.Adornee = currentGunDrop; nameTag.Parent = currentGunDrop
             end
             nameTag.Display.TextColor3 = gunColor
@@ -350,7 +380,7 @@ Players.PlayerRemoving:Connect(function(player)
     playerRoles[player.Name] = nil; playerDeadStatus[player.Name] = nil
 end)
 
--- 🕒 BUCLE PRINCIPAL
+-- 🕒 BUCLE PRINCIPAL (Maneja la inserción de datos en intervalos sanos)
 task.spawn(function()
     while true do
         for _, p in pairs(Players:GetPlayers()) do pcall(updatePlayerESP, p) end
@@ -359,7 +389,7 @@ task.spawn(function()
     end
 end)
 
--- 🚀 MOTOR EXCLUSIVO PARA TRACERS
+-- 🚀 MOTOR EXCLUSIVO PARA TRACERS (Cero Temblores en RenderStepped)
 RunService.RenderStepped:Connect(function()
     local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if Config.GunTracer and currentGunDrop and currentGunDrop:IsDescendantOf(Workspace) and currentGunDrop:IsA("BasePart") and myRoot then
@@ -367,6 +397,7 @@ RunService.RenderStepped:Connect(function()
         local distance = (myRoot.Position - currentGunDrop.Position).Magnitude
         local screenPos, onScreen = Camera:WorldToViewportPoint(currentGunDrop.Position)
         
+        -- Solo dibuja la línea si la pistola está dentro de la distancia configurada
         if onScreen and distance <= Config.MaxDistance then
             local viewportSize = Camera.ViewportSize
             local gunColor = getRoleColor("GunDrop", DefaultColors.GunDrop)
