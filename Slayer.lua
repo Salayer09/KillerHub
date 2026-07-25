@@ -75,7 +75,7 @@ end
 
 -- [3] INTERFAZ GRÁFICA
 local KillerHub = loadstring(game:HttpGet("https://raw.githubusercontent.com/Paolo0109/KillerHUB/refs/heads/main/InterfazBase.lua"))()
-local VisualsTab = KillerHub:CreateTab("Visuales", "rbxassetid://10747372517")
+local VisualsTab = KillerHub:CreateTab("Visuales", "rbxassetid://6523858394")
 
 VisualsTab:CreateSection("Murder Mystery 2 - Opciones ESP Jugadores")
 
