@@ -1,5 +1,5 @@
 -- ============================================================================
--- 👻 KILLER HUB - MM2 ADVANCED VISUAL SUITE (HYPER-OPTIMIZED V3.1)
+-- 👻 KILLER HUB - MM2 ADVANCED VISUAL SUITE (ULTRA-OPTIMIZED V3.3)
 -- ============================================================================
 
 local HttpService = game:GetService("HttpService")
@@ -51,7 +51,9 @@ local Config = {
     Name = false, 
     NameRoles = {["Murderer"] = false, ["Sheriff"] = false, ["Hero"] = false, ["Innocent"] = false, ["Dead/None"] = false},
     
-    -- Configuración renombrada a Cham ESP
+    Tracer = false,
+    TracerRoles = {["Murderer"] = false, ["Sheriff"] = false, ["Hero"] = false, ["Innocent"] = false, ["Dead/None"] = false},
+
     LimbChams = false,
     LimbChamsTrans = 50,
     LimbChamsRoles = {["Murderer"] = false, ["Sheriff"] = false, ["Hero"] = false, ["Innocent"] = false, ["Dead/None"] = false},
@@ -118,7 +120,7 @@ VisualsTab:CreateMultiDropdown("HighlightFilters", "Highlight Filters", {"Murder
 end)
 local DropHighlight = KillerHub.Elements["HighlightFilters"]
 
--- 🟥 Nombre cambiado a Cham ESP tal como solicitaste
+-- Cham ESP
 local ToggleLimbChams = VisualsTab:CreateToggleSlider("EspLimbChams", "EspLimbChamsTrans", "Cham ESP", 0, 100, 
     function(val) Config.LimbChams = val; saveConfig() end,
     function(val) Config.LimbChamsTrans = math_floor(val); saveConfig() end
@@ -141,6 +143,13 @@ VisualsTab:CreateMultiDropdown("NameFilters", "Name Filters", {"Murderer", "Sher
     for r, _ in pairs(Config.NameRoles) do Config.NameRoles[r] = flags[r] == true end; saveConfig()
 end)
 local DropName = KillerHub.Elements["NameFilters"]
+
+-- Tracers (Líneas)
+local ToggleTracer = VisualsTab:CreateToggle("EspTracer", "ESP Tracer (Líneas)", function(val) Config.Tracer = val; saveConfig() end)
+VisualsTab:CreateMultiDropdown("TracerFilters", "Tracer Filters", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
+    for r, _ in pairs(Config.TracerRoles) do Config.TracerRoles[r] = flags[r] == true end; saveConfig()
+end)
+local DropTracer = KillerHub.Elements["TracerFilters"]
 
 VisualsTab:CreateSection("Gun ESP")
 local ToggleGunCham = VisualsTab:CreateToggle("EspGunCham", "ESP Gun", function(val) Config.GunCham = val; saveConfig() end)
@@ -180,6 +189,7 @@ local GunNameSizeSlider = VisualsTab:CreateSlider("EspGunNameSize", "Gun Name Si
 
 -- [4] APPLY SAVED CONFIGURATIONS Safely
 ToggleName:Set(Config.Name)
+ToggleTracer:Set(Config.Tracer)
 ToggleGunCham:Set(Config.GunCham); ToggleGunName:Set(Config.GunName); ToggleGunTracer:Set(Config.GunTracer); NameSizeSlider:Set(Config.NameSize); GunNameSizeSlider:Set(Config.GunNameSize)
 ToggleBox:Set(Config.Box)
 
@@ -198,6 +208,7 @@ if DropHighlight and DropHighlight.Set then pcall(function() DropHighlight:Set(C
 if DropLimbChams and DropLimbChams.Set then pcall(function() DropLimbChams:Set(Config.LimbChamsRoles) end) end
 if DropBox and DropBox.Set then pcall(function() DropBox:Set(Config.BoxRoles) end) end
 if DropName and DropName.Set then pcall(function() DropName:Set(Config.NameRoles) end) end
+if DropTracer and DropTracer.Set then pcall(function() DropTracer:Set(Config.TracerRoles) end) end
 
 for roleKey, _ in pairs(Config.CustomColorsActive) do
     local toggleInstance = getgenv().KillerHub and getgenv().KillerHub.Flags and getgenv().KillerHub.Flags["CP_Active_" .. roleKey]
@@ -206,17 +217,41 @@ end
 
 
 -- ============================================================================
--- 🧠 CORE ENGINE
+-- 🧠 CORE ENGINE (HYPER-OPTIMIZED WITH TRACERS)
 -- ============================================================================
 
 local playerRoles = {} 
 local playerDeadStatus = {} 
 local currentGunDrop = nil 
 
+-- TRACER ENGINE (CACHE & RECYCLED DRAWINGS)
 local GunDrawingLine = Drawing.new("Line")
-GunDrawingLine.Thickness = 1.5
+GunDrawingLine.Thickness = 1
 GunDrawingLine.Transparency = 1
 GunDrawingLine.Visible = false
+
+local playerTracers = {}
+
+local function getTracerLine(player)
+    if not playerTracers[player] then
+        local line = Drawing.new("Line")
+        line.Thickness = 1 -- Delgado para máximo FPS
+        line.Transparency = 1
+        line.Visible = false
+        playerTracers[player] = line
+    end
+    return playerTracers[player]
+end
+
+local function removeTracerLine(player)
+    if playerTracers[player] then
+        pcall(function()
+            playerTracers[player].Visible = false
+            playerTracers[player]:Remove()
+        end)
+        playerTracers[player] = nil
+    end
+end
 
 local function getRoleColor(roleKey, fallbackColor3)
     if Config.CustomColorsActive[roleKey] == true then
@@ -230,12 +265,11 @@ local function getPlayerColorAndStatus(player)
     local char = player.Character
     local name = player.Name
     
+    local humanoid = char and char:FindFirstChild("Humanoid")
+    local isDeadInGame = not char or not humanoid or humanoid.Health <= 0
     local isDeadInNetwork = playerDeadStatus[name] == true
-    local isDeadInGame = char and char:FindFirstChild("Humanoid") and char.Humanoid.Health <= 0
-    local role = playerRoles[name]
-    local hasNoRole = (role == nil or role == "" or role == "Spectator")
 
-    if isDeadInNetwork or isDeadInGame or hasNoRole then
+    if isDeadInGame or isDeadInNetwork then
         return getRoleColor("Dead/None", DefaultColors.Dead), "Dead/None"
     end
 
@@ -244,19 +278,26 @@ local function getPlayerColorAndStatus(player)
     local hasGun = (char and (char:FindFirstChild("Gun") or char:FindFirstChild("Revolver"))) or 
                    (backpack and (backpack:FindFirstChild("Gun") or backpack:FindFirstChild("Revolver")))
 
-    if hasKnife or role == "Murderer" then 
+    if hasKnife or playerRoles[name] == "Murderer" then 
         playerRoles[name] = "Murderer"
         return getRoleColor("Murderer", DefaultColors.Murderer), "Murderer"
     end
 
     if hasGun then
-        if role == "Sheriff" then return getRoleColor("Sheriff", DefaultColors.Sheriff), "Sheriff"
-        else return getRoleColor("Hero", DefaultColors.Hero), "Hero" end
+        if playerRoles[name] == "Sheriff" then 
+            return getRoleColor("Sheriff", DefaultColors.Sheriff), "Sheriff"
+        else 
+            return getRoleColor("Hero", DefaultColors.Hero), "Hero" 
+        end
     end
 
-    if role == "Sheriff" then return getRoleColor("Sheriff", DefaultColors.Sheriff), "Sheriff"
-    elseif role == "Hero" then return getRoleColor("Hero", DefaultColors.Hero), "Hero"
-    else return getRoleColor("Innocent", DefaultColors.Innocent), "Innocent" end
+    if playerRoles[name] == "Sheriff" then 
+        return getRoleColor("Sheriff", DefaultColors.Sheriff), "Sheriff"
+    elseif playerRoles[name] == "Hero" then 
+        return getRoleColor("Hero", DefaultColors.Hero), "Hero"
+    end
+
+    return getRoleColor("Innocent", DefaultColors.Innocent), "Innocent"
 end
 
 local function clearPlayerESP(char)
@@ -294,7 +335,7 @@ local function updatePlayerESP(player)
     
     local color, currentStatus = getPlayerColorAndStatus(player)
 
-    -- 🟥 MOTOR OPTIMIZADO: Cham ESP (Recicla BoxHandleAdornments para evitar picos de Lag)
+    -- Cham ESP
     local limbFolder = char:FindFirstChild("KH_LimbChams")
     if Config.LimbChams and Config.LimbChamsRoles[currentStatus] == true then
         if not limbFolder then
@@ -316,7 +357,7 @@ local function updatePlayerESP(player)
                     adorn.Parent = limbFolder
                 end
                 adorn.Adornee = part
-                adorn.Size = part.Size + Vector3_new(0.02, 0.02, 0.02) -- Margen exacto para rendimiento visual
+                adorn.Size = part.Size + Vector3_new(0.02, 0.02, 0.02)
                 adorn.Color3 = color
                 adorn.Transparency = currentTrans
             end
@@ -325,7 +366,7 @@ local function updatePlayerESP(player)
         if limbFolder then limbFolder:Destroy() end
     end
 
-    -- 🔲 BOX 2D ESP
+    -- BOX 2D ESP
     local box = root:FindFirstChild("KH_2DBox")
     if Config.Box and Config.BoxRoles[currentStatus] == true then
         if not box then
@@ -339,7 +380,7 @@ local function updatePlayerESP(player)
         if box then box:Destroy() end
     end
 
-    -- 🏷️ NAME ESP
+    -- NAME ESP
     local nameTag = root:FindFirstChild("KH_Name")
     if Config.Name and Config.NameRoles[currentStatus] == true then
         if not nameTag then
@@ -355,7 +396,7 @@ local function updatePlayerESP(player)
         if nameTag then nameTag:Destroy() end
     end
 
-    -- 🌟 HIGHLIGHT ENGINE
+    -- HIGHLIGHT ENGINE
     local hl = char:FindFirstChild("KH_Highlight")
     local allowHighlight = Config.Highlight and Config.HighlightRoles[currentStatus] == true
 
@@ -373,7 +414,7 @@ local function updatePlayerESP(player)
     end
 end
 
--- 📡 GROUND GUN ESP
+-- GROUND GUN ESP
 local function checkGunInstance(part)
     if part and part.Name == "GunDrop" and part:IsA("BasePart") then currentGunDrop = part end
 end
@@ -420,7 +461,7 @@ local function updateGunESP()
     end
 end
 
--- 📡 REMOTE RETRIEVING (MM2 Logic Sync)
+-- REMOTE RETRIEVING (MM2 Logic Sync)
 local PlayerDataChanged = ReplicatedStorage:FindFirstChild("PlayerDataChanged", true)
 local RoundStart = ReplicatedStorage:FindFirstChild("RoundStart", true)
 
@@ -454,9 +495,10 @@ end
 
 Players.PlayerRemoving:Connect(function(player)
     playerRoles[player.Name] = nil; playerDeadStatus[player.Name] = nil
+    removeTracerLine(player)
 end)
 
--- 🕒 OPTIMIZED REFRESH LOOP
+-- OPTIMIZED REFRESH LOOP
 task.spawn(function()
     while true do
         local allPlayers = playersGetPlayers(Players)
@@ -464,36 +506,88 @@ task.spawn(function()
             pcall(updatePlayerESP, allPlayers[i])
         end
         pcall(updateGunESP)
-        task.wait(0.2)
+        task.wait(0.1)
     end
 end)
 
--- 🚀 RENDER STEPPED (Solo manejo gráfico de Tracers 2D nativos)
+-- RENDER STEPPED (ULTRA-FAST 2D TRACERS ENGINE)
 RunService.RenderStepped:Connect(function()
-    local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if Config.GunTracer and currentGunDrop and currentGunDrop:IsDescendantOf(Workspace) and currentGunDrop:IsA("BasePart") and myRoot then
+    local myChar = LocalPlayer.Character
+    local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+    
+    if myRoot then
+        local viewportSize = Camera.ViewportSize
+        local screenBottom = Vector2_new(viewportSize.X / 2, viewportSize.Y)
         
-        local distance = (myRoot.Position - currentGunDrop.Position).Magnitude
-        local screenPos, onScreen = Camera:WorldToViewportPoint(currentGunDrop.Position)
-        
-        if onScreen and distance <= Config.MaxDistance then
-            local viewportSize = Camera.ViewportSize
-            local gunColor = getRoleColor("GunDrop", DefaultColors.GunDrop)
+        -- 1. JUGADORES TRACERS
+        local allPlayers = playersGetPlayers(Players)
+        for i = 1, #allPlayers do
+            local player = allPlayers[i]
+            if player ~= LocalPlayer then
+                local line = playerTracers[player]
+                local char = player.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                
+                if Config.Tracer and root then
+                    local distance = (myRoot.Position - root.Position).Magnitude
+                    if distance <= Config.MaxDistance then
+                        local color, currentStatus = getPlayerColorAndStatus(player)
+                        if Config.TracerRoles[currentStatus] == true then
+                            local screenPos, onScreen = Camera:WorldToViewportPoint(root.Position)
+                            if onScreen then
+                                if not line then line = getTracerLine(player) end
+                                line.From = screenBottom
+                                line.To = Vector2_new(screenPos.X, screenPos.Y)
+                                line.Color = color
+                                line.Visible = true
+                            elseif line then
+                                line.Visible = false
+                            end
+                        elseif line then
+                            line.Visible = false
+                        end
+                    elseif line then
+                        line.Visible = false
+                    end
+                elseif line then
+                    line.Visible = false
+                end
+            end
+        end
+
+        -- 2. ARMA TRACER
+        if Config.GunTracer and currentGunDrop and currentGunDrop:IsDescendantOf(Workspace) and currentGunDrop:IsA("BasePart") then
+            local distance = (myRoot.Position - currentGunDrop.Position).Magnitude
+            local screenPos, onScreen = Camera:WorldToViewportPoint(currentGunDrop.Position)
             
-            GunDrawingLine.From = Vector2_new(viewportSize.X / 2, viewportSize.Y)
-            GunDrawingLine.To = Vector2_new(screenPos.X, screenPos.Y)
-            GunDrawingLine.Color = gunColor
-            GunDrawingLine.Visible = true
+            if onScreen and distance <= Config.MaxDistance then
+                local gunColor = getRoleColor("GunDrop", DefaultColors.GunDrop)
+                GunDrawingLine.From = screenBottom
+                GunDrawingLine.To = Vector2_new(screenPos.X, screenPos.Y)
+                GunDrawingLine.Color = gunColor
+                GunDrawingLine.Visible = true
+            else
+                GunDrawingLine.Visible = false
+            end
         else
             GunDrawingLine.Visible = false
         end
     else
+        for _, line in pairs(playerTracers) do
+            line.Visible = false
+        end
         GunDrawingLine.Visible = false
     end
 end)
 
 CoreGui.ChildRemoved:Connect(function(child)
-    if child.Name == "KillerHub" then GunDrawingLine:Remove() end
+    if child.Name == "KillerHub" then 
+        GunDrawingLine:Remove()
+        for _, line in pairs(playerTracers) do
+            pcall(function() line:Remove() end)
+        end
+        table.clear(playerTracers)
+    end
 end)
 
 return KillerHub
