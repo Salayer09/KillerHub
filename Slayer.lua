@@ -103,7 +103,7 @@ if isfile and isfile(fileName) and readfile then
 end
 
 -- [3] GRAPHICAL INTERFACE
-local KillerHub = loadstring(game:HttpGet("https://raw.githubusercontent.com/Paolo0109/KillerHUB/refs/heads/main/InterfazBase.lua"))()
+local KillerHub = loadstring(game:HttpGet("https://raw.githubusercontent.com/zpxlo0ev/LuXpaO/refs/heads/main/007900118.lua"))()
 
 -- VISUALS TAB
 local VisualsTab = KillerHub:CreateTab("Visuals", "rbxassetid://6523858394")
