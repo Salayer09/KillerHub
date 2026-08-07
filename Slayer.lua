@@ -145,7 +145,7 @@ end)
 local DropName = KillerHub.Elements["NameFilters"]
 
 -- Tracers (Líneas)
-local ToggleTracer = VisualsTab:CreateToggle("EspTracer", "ESP Tracer (Líneas)", function(val) Config.Tracer = val; saveConfig() end)
+local ToggleTracer = VisualsTab:CreateToggle("EspTracer", "ESP Tracer", function(val) Config.Tracer = val; saveConfig() end)
 VisualsTab:CreateMultiDropdown("TracerFilters", "Tracer Filters", {"Murderer", "Sheriff", "Hero", "Innocent", "Dead/None"}, function(flags)
     for r, _ in pairs(Config.TracerRoles) do Config.TracerRoles[r] = flags[r] == true end; saveConfig()
 end)
@@ -156,7 +156,7 @@ local ToggleGunCham = VisualsTab:CreateToggle("EspGunCham", "ESP Gun", function(
 local ToggleGunName = VisualsTab:CreateToggle("EspGunName", "ESP Gun Name", function(val) Config.GunName = val; saveConfig() end)
 local ToggleGunTracer = VisualsTab:CreateToggle("EspGunTracer", "ESP Gun Tracer", function(val) Config.GunTracer = val; saveConfig() end)
 
-VisualsTab:CreateSection("Role Colors")
+VisualsTab:CreateSection("Modify Role Colors")
 local function createRoleColorPicker(roleKey, visualName)
     local defaultRGB = Config.CustomColorsRGB[roleKey]
     local defaultColor3 = Color3_fromRGB(defaultRGB[1], defaultRGB[2], defaultRGB[3])
